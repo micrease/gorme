@@ -16,7 +16,7 @@ type Product struct {
 
 func main() {
 
-	dsn := "root:123456@tcp(127.0.0.1:3306)/gormx?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := "root:123456@tcp(127.0.0.1:3306)/gorme?charset=utf8mb4&parseTime=True&loc=Local"
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info)})
 	if err != nil {
@@ -67,7 +67,7 @@ func testPaginate(db *gorm.DB) *gorme.PageResult[Product] {
 	query.Where("id>?", 3).
 		Where("id<?", 100).
 		Order("id desc").
-		Order("price desc").Limit(100)
+		Order("price desc")
 
 	pageNo := 1
 	pageSize := 5
