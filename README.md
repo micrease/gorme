@@ -17,7 +17,7 @@ type Product struct {
 	Price uint   `json:"price"`
 }
 ```
-####单一数据查询
+#### 单一数据查询
 ```go
 //使用gorm的常规方法构建查询
 query := db.Where("id=?", 1)
@@ -25,13 +25,13 @@ query := db.Where("id=?", 1)
 product, err := gorme.GetOne[Product](query)
 ```
 
-####列表查询
+#### 列表查询
 ```go
 //执行查询并返回Product类型的结果
 products, err := gorme.List[Product](query)
 ```
 
-####分页查询
+#### 分页查询
 分页查询结果数据结构
 ```go
 type PageResult[T any] struct {
@@ -65,6 +65,6 @@ product := db.Find()
 ```
 2.在比较复杂的结构中如分页查询，其结果集中除了列表外，还需要总条数，页码等信息。列表中的数据类型可以动态指定，因此使用泛型实现是一个很好的方式。
 
-###features
+### features
 1,增加更完善的查询条件构建方法。不需要关心where,limit,order等顺序问题。比如原生limit写在后面是无效的。  
 2,update时传结构体会忽略0值。需要增加一个tag来控制是否在结构体中使用0值
