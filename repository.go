@@ -17,10 +17,10 @@ func (r *Repository[T]) First() (*T, error) {
 	return &t, err
 }
 
-func (r *Repository[T]) List() (*[]T, error) {
+func (r *Repository[T]) List() ([]T, error) {
 	var t []T
 	err := r.DB.Find(&t).Error
-	return &t, err
+	return t, err
 }
 
 func (r *Repository[T]) Paginate(pageNo uint64, pageSize int) (*PageResult[T], error) {
