@@ -1,7 +1,6 @@
 package main
 
 import (
-	"example/repository"
 	"fmt"
 	"github.com/micrease/gorme"
 	"gorm.io/driver/mysql"
@@ -16,7 +15,7 @@ type UserModel struct {
 }
 
 type UserRepo struct {
-	repository.Repository[UserModel]
+	gorme.Repository[UserModel]
 }
 
 func NewUserRepo(db *gorm.DB) *UserRepo {

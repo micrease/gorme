@@ -3,7 +3,7 @@ module example
 go 1.18
 
 require (
-	github.com/micrease/gorme v1.0.0
+	github.com/micrease/gorme v1.0.2
 	gorm.io/driver/mysql v1.3.3
 	gorm.io/gorm v1.23.4
 )
