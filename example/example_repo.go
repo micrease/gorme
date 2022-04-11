@@ -25,14 +25,13 @@ func NewUserRepo(db *gorm.DB) *UserRepo {
 }
 
 func (u *UserRepo) GetFirst() (*UserModel, error) {
-	//gorm原生查询
-	//var m1 UserModel
-	//err1:=u.DB.First(&m1).Error
-	//gorme封装后的查询
-	//m2,err2:= u.First()
-
 	result, err := u.Select("age").Offset(1).Limit(1).Order("id desc").Where("id<?", 20).Where("age > ?", 1).First()
 	fmt.Println(result.Age, result.UserName, err)
+	return result, err
+}
+
+func (u *UserRepo) GetList() (*[]UserModel, error) {
+	result, err := u.Select("age").Offset(1).Limit(5).Order("id desc").Where("id<?", 40).Where("age > ?", 1).List()
 	return result, err
 }
 
