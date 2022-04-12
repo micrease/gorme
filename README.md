@@ -40,14 +40,13 @@ type Product struct {
 	Price uint   `json:"price"`
 }
 ```
-#### 单一数据查询
 构建query参数
 ```go
 //使用gorm的常规方法构建查询,如
 query := db.Where("id=?", 1)
 query := db.Model(&Product{}).Select("age").Offset(1).Limit(1).Order("id desc").Where("id<?", 20).Where("price > ?", 1)
 ```
-
+#### 单一数据查询
 ```go
 //执行查询并返回Product类型的结果
 product, err := gorme.GetOne[Product](query)
