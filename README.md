@@ -4,7 +4,7 @@
 gorme是一个小巧又实用的gorm查询辅助工具,使用go1.18最新特性泛型封装,可以容易的实现分页查询,列表查询和单一结果查询。
 ```go
 query := db.Where("age>?", 3)
-result,err := gorme.Paginate[Product](query), 1, 10)
+result,err := gorme.Paginate[Product](query, 1, 10)
 or:
 result,err := repo.Paginate( 1, 10)
 ```
