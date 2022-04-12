@@ -146,6 +146,10 @@ if err != nil {
     panic("failed to connect database")
 }
 //分页查询
-userRepo := NewUserRepo(db)
-result,err:=userRepo.Paginate()
+exampleRepo := NewExampleRepo(db)
+exampleRepo.GetFirst()
+exampleRepo.GetList()
+exampleRepo.GetPaginateList()
+
+m, _ := exampleRepo.First()
 ```
