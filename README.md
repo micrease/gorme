@@ -3,7 +3,7 @@
 
 gorme是一个小巧又实用的gorm查询辅助工具,使用go1.18最新特性泛型封装,可以容易的实现分页查询,列表查询和单一结果查询。
 ```go
-query := db.Where("age>?", 10)
+query := db.Where("age>?", 3)
 result,err := gorme.Paginate[Product](query), 1, 10)
 or:
 result,err := repo.Paginate( 1, 10)
@@ -93,7 +93,8 @@ products = result.List
 | repo.Take()(T,error)                                 | 查询一条记录              | db.Take(&t)           |                
 | repo.GetOne()(T,error)                               | 查询一条记录,Take的别名      | db.Take(&t)           |
 | repo.List(num)([]T,error)                            | 查询多条记录,返回列表         | db.Find(&t)           |                
-| repo.Paginate(pageNo,pageSize)(*PageResult[T],error) | 分页查询,返回PageResult结构 | db.Find(&t).Count(&c) |   
+| repo.Paginate(pageNo,pageSize)(*PageResult[T],error) | 分页查询,返回PageResult结构 | db.Find(&t).Count(&c) |
+
 当然也可以使用gorm原生操作。u.DB即是*gorm.DB,你可以通过u.DB.Where(...).Find(...)形式进行原生查询.
 ```go
 //这个一个例子
