@@ -6,39 +6,53 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"math/rand"
 )
 
-type UserModel struct {
+//这个一个例子
+type ExampleModel struct {
 	gorm.Model
 	UserName string
 	Age      int
 }
 
-type UserRepo struct {
-	gorme.Repository[UserModel]
+//举一个例子，ExampleRepo(可以换成你自己定义的Repo)继承gorme.Repository[T]
+type ExampleRepo struct {
+	gorme.Repository[ExampleModel]
 }
 
-func NewUserRepo(db *gorm.DB) *UserRepo {
-	repo := UserRepo{}
-	repo.DB = db
+func NewExampleRepo(db *gorm.DB) *ExampleRepo {
+	repo := ExampleRepo{}
+	repo.SetDB(db)
 	return &repo
 }
 
-func (u *UserRepo) GetFirst() (*UserModel, error) {
-	result, err := u.Select("age").Offset(1).Limit(1).Order("id desc").Where("id<?", 20).Where("age > ?", 1).First()
-	fmt.Println(result.Age, result.UserName, err)
+func (e *ExampleRepo) GetFirst() (ExampleModel, error) {
+	result, err := e.Select("id,age").Where("id>10").First()
+	fmt.Println(result.ID, result.Age, result.UserName, err)
 	return result, err
 }
 
-func (u *UserRepo) GetList() (*[]UserModel, error) {
-	result, err := u.Select("age").Offset(1).Limit(5).Order("id desc").Where("id<?", 40).Where("age > ?", 1).List()
+func (e *ExampleRepo) GetList() ([]ExampleModel, error) {
+	//result, err := e.Select("age").Offset(1).Limit(5).Order("id desc").Where("id<?", 40).Where("age > ?", 1).List()
+	//result, err := e.Limit(5).List()
+	result, err := e.List(3)
+	printList(result)
 	return result, err
 }
 
-func (u *UserRepo) Paginate() (*gorme.PageResult[UserModel], error) {
-	result, err := u.Select("age").Order("id desc").Where("id<?", 20).Where("age > ?", 1).Paginate(1, 2)
+func (e *ExampleRepo) GetPaginateList() (*gorme.PageResult[ExampleModel], error) {
+	result, err := e.Select("*").Paginate(1, 10)
+	fmt.Println("result list len=", len(result.List))
 	fmt.Println(result.TotalSize, err)
+	printList(result.List)
 	return result, err
+}
+
+func printList(list []ExampleModel) {
+	for _, v := range list {
+		println(v.ID, v.UserName, v.Age)
+	}
 }
 
 func main() {
@@ -49,13 +63,18 @@ func main() {
 		panic("failed to connect database")
 	}
 
-	db.AutoMigrate(&UserModel{})
+	db.AutoMigrate(&ExampleModel{})
 	for i := 0; i < 100; i++ {
-		//name := fmt.Sprintf("Name%d", i)
-		//age := rand.Intn(40)
-		//db.Create(&UserModel{UserName: name, Age: age})
+		name := fmt.Sprintf("Name%d", i)
+		age := rand.Intn(40)
+		db.Create(&ExampleModel{UserName: name, Age: age})
 	}
 
-	userRepo := NewUserRepo(db)
-	userRepo.Paginate()
+	userRepo := NewExampleRepo(db)
+	userRepo.GetFirst()
+	userRepo.GetList()
+	userRepo.GetPaginateList()
+
+	u, _ := userRepo.First()
+	fmt.Println(u)
 }

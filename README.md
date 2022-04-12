@@ -2,18 +2,36 @@
 ### GORME介绍
 
 gorme是一个小巧又实用的gorm查询辅助工具,使用go1.18最新特性泛型封装,可以容易的实现分页查询,列表查询和单一结果查询。
+```go
+query := db.Where("age>?", 10)
+result,err := gorme.Paginate[Product](query), 1, 10)
+or:
+result,err := repo.Paginate( 1, 10)
+```
 ### 安装方法
 ```
 go get github.com/micrease/gorme
 ```
-由于使用了泛型，因此需要go最新版本1.18  
+> 由于使用了泛型，因此需要新版本go1.18  
+> Goland对泛型支持尚不完善,更好的支持可以选择2022.1RC版本  
+> 使用方法可参考example中的代码
 ### 使用说明
 提供了两种使用方式:  
 1.一种是基于gorm写法，仅对结果集进行轻度封装，无耦合。适合简单改造。    
 2.另一种是通过继承Repository可以实现链式调用。代码更加优雅。更符合工程化。
 
 ### 1.函数调用
-gorme只对查询结果进行了处理，因此你可以像往常一样使用gorm构建查询和排序等操作。只需要对获取结果进行很小的修改即可  
+gorme只对查询结果进行了处理，因此你可以像往常一样使用gorm构建查询和排序等操作。只需要对获取结果进行很小的修改即可，通常是替换Fist,Find等结果获取方法  
+
+| gorme方法                                                        | 功能说明                | 对应gorm                |
+|:---------------------------------------------------------------|:--------------------|:----------------------|
+| gorme.First\[T](query)(T,error)                                | 查询第一条记录             | db.First(&t)          |                
+| gorme.Last\[T](query)(T,error)                                 | 查询最后一条记录            | db.Last(&t)           |                
+| gorme.Take\[T](query)(T,error)                                 | 查询一条记录              | db.Take(&t)           |                
+| gorme.GetOne\[T](query)(T,error)                               | 查询一条记录,Take的别名      | db.Take(&t)           |
+| gorme.List\[T](query)([]T,error)                               | 查询多条记录,返回列表         | db.Find(&t)           |                
+| gorme.Paginate\[T](query,pageNo,pageSize)(*PageResult[T],error)| 分页查询,返回PageResult结构 | db.Find(&t).Count(&c) |                
+
 以下以Product为例,[详细代码](https://github.com/micrease/gorme/blob/master/example/example.go)
 ```go
 type Product struct {
@@ -23,11 +41,19 @@ type Product struct {
 }
 ```
 #### 单一数据查询
+构建query参数
 ```go
-//使用gorm的常规方法构建查询
+//使用gorm的常规方法构建查询,如
 query := db.Where("id=?", 1)
+query := db.Model(&Product{}).Select("age").Offset(1).Limit(1).Order("id desc").Where("id<?", 20).Where("price > ?", 1)
+```
+
+```go
 //执行查询并返回Product类型的结果
 product, err := gorme.GetOne[Product](query)
+product, err := gorme.First[Product](query)
+product, err := gorme.Last[Product](query)
+product, err := gorme.Take[Product](query)
 ```
 
 #### 列表查询
@@ -50,7 +76,7 @@ type PageResult[T any] struct {
 分页查询方法
 ```go
 //执行查询并返回一个分页结果集
-result, err := gorme.PaginateSimple[Product](query, pageNo, pageSize)
+result, err := gorme.Paginate[Product](query, pageNo, pageSize)
 
 fmt.Println("totalSize", result.TotalSize)
 var products []Product
@@ -58,47 +84,56 @@ var products []Product
 products = result.List
 ```
 ### 2.继承Repository链式调用
-可以像gorm一样的调用方式。Repository继承了几乎所有gorm方法。新增加方法有:  
-* First() 查询单条记录。不同与gorm中的First，此方法无参数。  
-* List()  查询列表  
-* Paginate(pageNo,PageSize) 分页函数  
+可以像gorm一样的调用方式。Repository继承了几乎所有gorm方法。
+
+| Repository方法                                         | 功能说明                | 对应gorm                |
+|:-----------------------------------------------------|:--------------------|:----------------------|
+| repo.First()(T,error)                                | 查询第一条记录             | db.First(&t)          |                
+| repo.Last()(T,error)                                 | 查询最后一条记录            | db.Last(&t)           |                
+| repo.Take()(T,error)                                 | 查询一条记录              | db.Take(&t)           |                
+| repo.GetOne()(T,error)                               | 查询一条记录,Take的别名      | db.Take(&t)           |
+| repo.List(num)([]T,error)                            | 查询多条记录,返回列表         | db.Find(&t)           |                
+| repo.Paginate(pageNo,pageSize)(*PageResult[T],error) | 分页查询,返回PageResult结构 | db.Find(&t).Count(&c) |   
 当然也可以使用gorm原生操作。u.DB即是*gorm.DB,你可以通过u.DB.Where(...).Find(...)形式进行原生查询.
 ```go
-type UserModel struct {
-	gorm.Model
-	UserName string
-	Age      int
+//这个一个例子
+type ExampleModel struct {
+    gorm.Model
+    UserName string
+    Age      int
 }
 
-type UserRepo struct {
-	gorme.Repository[UserModel]
+//举一个例子，ExampleRepo(可以换成你自己定义的Repo)继承gorme.Repository[T]
+type ExampleRepo struct {
+    gorme.Repository[ExampleModel]
 }
 
-func NewUserRepo(db *gorm.DB) *UserRepo {
-	repo := UserRepo{}
-	repo.DB = db
-	return &repo
+func NewExampleRepo(db *gorm.DB) *ExampleRepo {
+    repo := ExampleRepo{}
+    repo.SetDB(db)
+    return &repo
 }
 
-//对First方法进行了重写，注意返回值
-func (u *UserRepo) GetFirst() (*UserModel, error) {
-	result, err := u.Select("age").Offset(1).Limit(1).Order("id desc").Where("id<?", 20).Where("age > ?", 1).First()
-	fmt.Println(result.Age, result.UserName, err)
-	return result, err
-}
-
-//查询列表
-func (u *UserRepo) GetList() (*[]UserModel, error) {
-    result, err := u.Select("age").Offset(1).Limit(5).Order("id desc").Where("id<?", 40).Where("age > ?", 1).List()
+func (e *ExampleRepo) GetFirst() (ExampleModel, error) {
+    result, err := e.Select("id,age").Where("id>10").First()
+    fmt.Println(result.ID, result.Age, result.UserName, err)
     return result, err
 }
 
+func (e *ExampleRepo) GetList() ([]ExampleModel, error) {
+    //result, err := e.Select("age").Offset(1).Limit(5).Order("id desc").Where("id<?", 40).Where("age > ?", 1).List()
+    //result, err := e.Limit(5).List()
+    result, err := e.List(3)
+    printList(result)
+    return result, err
+}
 
-//分页查询
-func (u *UserRepo) Paginate() (*gorme.PageResult[UserModel], error) {
-	result, err := u.Select("age").Order("id desc").Where("id<?", 20).Where("age > ?", 1).Paginate(1, 2)
-	fmt.Println(result.TotalSize, err)
-	return result, err
+func (e *ExampleRepo) GetPaginateList() (*gorme.PageResult[ExampleModel], error) {
+    result, err := e.Paginate(1, 10)
+    fmt.Println("result list len=", len(result.List))
+    fmt.Println(result.TotalSize, err)
+    printList(result.List)
+    return result, err
 }
 
 ```
@@ -114,20 +149,3 @@ if err != nil {
 userRepo := NewUserRepo(db)
 result,err:=userRepo.Paginate()
 ```
-
-### 设计思想  
-1.通过赋值方式代码可读性更好    
-通常查询结果通过传引用的方式使用反射机制赋值如:
-```go
-var product Product
-db.Find(&product)
-```
-这种方式对于人类自然逻辑并不友好，并且每次查询都要提前声明一个变量接收值。显然通过赋值方式代码可读性更好,如:
-```go
-product := db.Find[Product]()
-```
-2.在比较复杂的结构中如分页查询，其结果集中除了列表外，还需要总条数，页码等信息。列表中的数据类型可以动态指定，因此使用泛型实现是一个很好的方式。
-
-### features
-1,增加更完善的查询条件构建方法。不需要关心where,limit,order等顺序问题。比如原生limit写在后面是无效的。  
-2,update时传结构体会忽略0值。需要增加一个tag来控制是否在结构体中使用0值

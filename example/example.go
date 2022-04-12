@@ -14,9 +14,14 @@ type Product struct {
 	Price uint   `json:"price"`
 }
 
+type Other struct {
+	Code  string `json:"code"`
+	Price uint   `json:"price"`
+}
+
 func main() {
 
-	dsn := "root:123456@tcp(127.0.0.1:3306)/gorme?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := "gorme:123456@tcp(127.0.0.1:3306)/gorme?charset=utf8mb4&parseTime=True&loc=Local"
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info)})
 	if err != nil {
@@ -32,15 +37,28 @@ func main() {
 	testObject(db)
 	testList(db)
 	testPaginate(db)
-
 }
 
-//获取指定对象
+//获取单一对象
 func testObject(db *gorm.DB) Product {
-	query := db.Where("id=?", 1)
-	//list类型为[]Product
-	val, _ := gorme.GetOne[Product](query)
-	fmt.Println(val.ID, val.Price, val.Code)
+	//val类型为Product
+	val, _ := gorme.Last[Product](db)
+	fmt.Println("Last", val.ID, val.Price, val.Code)
+
+	val, _ = gorme.First[Product](db)
+	fmt.Println("First", val.ID, val.Price, val.Code)
+
+	db = db.Where("id=?", 3)
+	val, _ = gorme.Take[Product](db)
+	fmt.Println("Take", val.ID, val.Price, val.Code)
+	//GetOne = Take
+	val, _ = gorme.GetOne[Product](db)
+	fmt.Println("GetOne", val.ID, val.Price, val.Code)
+
+	query2 := db.Model(&Product{}).Where("id=?", 2)
+	val2, _ := gorme.GetOne[Other](query2)
+	fmt.Println(val2)
+
 	return val
 }
 
@@ -71,7 +89,7 @@ func testPaginate(db *gorm.DB) *gorme.PageResult[Product] {
 
 	pageNo := 1
 	pageSize := 5
-	result, _ := gorme.PaginateSimple[Product](query, uint64(pageNo), pageSize)
+	result, _ := gorme.Paginate[Product](query, pageNo, pageSize)
 
 	printPageResult(result)
 	// SELECT * FROM `products` WHERE code = 'D42' AND id>3 AND id<100 AND `products`.`deleted_at` IS NULL ORDER BY id desc,price desc LIMIT 5
@@ -90,7 +108,7 @@ func testPaginate(db *gorm.DB) *gorme.PageResult[Product] {
 	req.PageSize = 7
 	req.MinPrice = 10
 	query = db.Where("price>?", req.MinPrice)
-	result, _ = gorme.Paginate[Product]([]gorme.Option{
+	result, _ = gorme.PaginateByOptions[Product]([]gorme.Option{
 		gorme.WithQuery(query),
 		gorme.WithPage(req.PageQuery),
 	}...)

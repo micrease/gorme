@@ -7,24 +7,69 @@ import (
 )
 
 type Repository[T any] struct {
+	//一个初始干净的db
+	_initDB *gorm.DB
 	//如果继承的方式，无法形成链式结构x().y().Paginate(),因为x(),y()返回的是gorm.DB,而这个对象不具有Repository中的方法
 	DB *gorm.DB
 }
 
-func (r *Repository[T]) First() (*T, error) {
-	var t T
-	err := r.DB.First(&t).Error
-	return &t, err
+func (r *Repository[T]) SetDB(db *gorm.DB) *Repository[T] {
+	r.DB = db
+	r._initDB = db
+	return r
 }
 
-func (r *Repository[T]) List() ([]T, error) {
-	var t []T
-	err := r.DB.Find(&t).Error
+func (r *Repository[T]) First() (T, error) {
+	var t T
+	err := r.DB.First(&t).Error
+	//把DB初始化
+	r.DB = r._initDB
 	return t, err
 }
 
-func (r *Repository[T]) Paginate(pageNo uint64, pageSize int) (*PageResult[T], error) {
-	return PaginateSimple[T](r.DB, pageNo, pageSize)
+func (r *Repository[T]) Last() (T, error) {
+	var t T
+	err := r.DB.Last(&t).Error
+	//把DB初始化
+	r.DB = r._initDB
+	return t, err
+}
+
+func (r *Repository[T]) GetOne() (T, error) {
+	//把DB初始化
+	r.DB = r._initDB
+	return r.Take()
+}
+
+func (r *Repository[T]) Take() (T, error) {
+	var t T
+	err := r.DB.Take(&t).Error
+	//把DB初始化
+	r.DB = r._initDB
+	return t, err
+}
+
+func (r *Repository[T]) List(args ...int) ([]T, error) {
+	if len(args) > 1 {
+		panic("the number of args cannot exceed 1")
+	}
+
+	var t []T
+	if len(args) == 1 {
+		limit := args[0]
+		r.DB = r.DB.Limit(limit)
+	}
+	err := r.DB.Find(&t).Error
+	//DB初始化
+	r.DB = r._initDB
+	return t, err
+}
+
+func (r *Repository[T]) Paginate(pageNo int, pageSize int) (*PageResult[T], error) {
+	result, err := Paginate[T](r.DB, pageNo, pageSize)
+	//把DB初始化
+	r.DB = r._initDB
+	return result, err
 }
 
 //=========================================以下对DB原生方法套壳==================================================
