@@ -63,23 +63,24 @@ func testObject(db *gorm.DB) Product {
 }
 
 //获取指定对象列表
-func testList(db *gorm.DB) []Product {
+func testList(db *gorm.DB) []*Product {
 	query := db.Limit(6)
 	query.Select("id,price").Where("id>?", 3).
 		Order("price desc").
 		Order("id desc")
 
 	//list类型为[]Product
-	list, _ := gorme.List[Product](query)
+	list, _ := gorme.List[*Product](query)
 	for _, v := range list {
 		//v是一个Product类型
+		v.Price = 33
 		fmt.Println(v.ID, v.Price, v.Code)
 	}
 	return list
 }
 
 //获取指定对象分页结构
-func testPaginate(db *gorm.DB) *gorme.PageResult[Product] {
+func testPaginate(db *gorm.DB) *gorme.PageResult[*Product] {
 	//example1
 	query := db.Where("code = ?", "D42") // 查找 code 字段值为 D42 的记录
 	query.Where("id>?", 3).
@@ -89,7 +90,7 @@ func testPaginate(db *gorm.DB) *gorme.PageResult[Product] {
 
 	pageNo := 1
 	pageSize := 5
-	result, _ := gorme.Paginate[Product](query, pageNo, pageSize)
+	result, _ := gorme.Paginate[*Product](query, pageNo, pageSize)
 
 	printPageResult(result)
 	// SELECT * FROM `products` WHERE code = 'D42' AND id>3 AND id<100 AND `products`.`deleted_at` IS NULL ORDER BY id desc,price desc LIMIT 5
@@ -108,7 +109,7 @@ func testPaginate(db *gorm.DB) *gorme.PageResult[Product] {
 	req.PageSize = 7
 	req.MinPrice = 10
 	query = db.Where("price>?", req.MinPrice)
-	result, _ = gorme.PaginateByOptions[Product]([]gorme.Option{
+	result, _ = gorme.PaginateByOptions[*Product]([]gorme.Option{
 		gorme.WithQuery(query),
 		gorme.WithPage(req.PageQuery),
 	}...)
@@ -119,18 +120,19 @@ func testPaginate(db *gorm.DB) *gorme.PageResult[Product] {
 	return result
 }
 
-func printPageResult(result *gorme.PageResult[Product]) {
+func printPageResult(result *gorme.PageResult[*Product]) {
 	fmt.Println("totalSize", result.TotalSize)
 	fmt.Println("totalPage", result.TotalPage)
 	fmt.Println("PageNo", result.PageNo)
 	fmt.Println("PageSize", result.PageSize)
 	fmt.Println("ID", "Price", "Code")
 
-	var products []Product
+	var products []*Product
 	//result.List是[]Product类型
 	products = result.List
 	for _, v := range products {
 		//v是一个Product类型
 		fmt.Println(v.ID, v.Price, v.Code)
+		v.Price = 44
 	}
 }

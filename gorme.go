@@ -14,7 +14,7 @@ type PageResult[T any] struct {
 	PageNo    int   `json:"page_no"`    //当前页码
 	TotalPage int64 `json:"total_page"` //总页数
 	TotalSize int64 `json:"total_size"` //总条数
-	List      []T   `json:"list"`       //数据列表
+	List      []*T  `json:"list"`       //数据列表
 }
 
 type QueryBuilder struct {
@@ -69,7 +69,7 @@ func PaginateQuery[T any](query *gorm.DB, page PageQuery) (*PageResult[T], error
 	result.PageNo = page.PageNo
 	result.PageSize = page.PageSize
 	offset := (page.PageNo - 1) * page.PageSize
-	var rows []T
+	var rows []*T
 	err := query.Limit(page.PageSize).Offset(offset).Find(&rows).Count(&result.TotalSize).Error
 	if (int(result.TotalSize) % page.PageSize) > 0 {
 		result.TotalPage = result.TotalSize/int64(page.PageSize) + 1

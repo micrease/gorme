@@ -19,11 +19,16 @@ func (r *Repository[T]) SetDB(db *gorm.DB) *Repository[T] {
 	return r
 }
 
+func (r *Repository[T]) Reset() *Repository[T] {
+	r.DB = r._initDB
+	return r
+}
+
 func (r *Repository[T]) First() (T, error) {
 	var t T
 	err := r.DB.First(&t).Error
 	//把DB初始化
-	r.DB = r._initDB
+	r.Reset()
 	return t, err
 }
 
@@ -31,13 +36,11 @@ func (r *Repository[T]) Last() (T, error) {
 	var t T
 	err := r.DB.Last(&t).Error
 	//把DB初始化
-	r.DB = r._initDB
+	r.Reset()
 	return t, err
 }
 
 func (r *Repository[T]) GetOne() (T, error) {
-	//把DB初始化
-	r.DB = r._initDB
 	return r.Take()
 }
 
@@ -45,7 +48,7 @@ func (r *Repository[T]) Take() (T, error) {
 	var t T
 	err := r.DB.Take(&t).Error
 	//把DB初始化
-	r.DB = r._initDB
+	r.Reset()
 	return t, err
 }
 
@@ -61,18 +64,116 @@ func (r *Repository[T]) List(args ...int) ([]T, error) {
 	}
 	err := r.DB.Find(&t).Error
 	//DB初始化
-	r.DB = r._initDB
+	r.Reset()
 	return t, err
 }
 
 func (r *Repository[T]) Paginate(pageNo int, pageSize int) (*PageResult[T], error) {
 	result, err := Paginate[T](r.DB, pageNo, pageSize)
 	//把DB初始化
-	r.DB = r._initDB
+	r.Reset()
 	return result, err
 }
 
-//=========================================以下对DB原生方法套壳==================================================
+//======================================最后调用的方法返回*gorm.DB,这样获取结果中的信息更方便一些=====================================
+
+func (r *Repository[T]) Create(value interface{}) *gorm.DB {
+	tx := r.DB.Create(value)
+	r.Reset()
+	return tx
+}
+
+func (r *Repository[T]) Save(value interface{}) *gorm.DB {
+	tx := r.DB.Save(value)
+	r.Reset()
+	return tx
+}
+
+func (r *Repository[T]) Updates(values interface{}) *gorm.DB {
+	tx := r.DB.Updates(values)
+	r.Reset()
+	return tx
+}
+
+func (r *Repository[T]) Update(column string, value interface{}) *gorm.DB {
+	tx := r.DB.Update(column, value)
+	r.Reset()
+	return tx
+}
+
+func (r *Repository[T]) UpdateColumn(column string, value interface{}) *gorm.DB {
+	tx := r.DB.UpdateColumn(column, value)
+	r.Reset()
+	return tx
+}
+
+func (r *Repository[T]) UpdateColumns(values interface{}) *gorm.DB {
+	tx := r.DB.UpdateColumns(values)
+	r.Reset()
+	return tx
+}
+
+func (r *Repository[T]) Delete(value interface{}, conds ...interface{}) *gorm.DB {
+	tx := r.DB.Delete(value, conds...)
+	r.Reset()
+	return tx
+}
+
+func (r *Repository[T]) Begin(opts ...*sql.TxOptions) *gorm.DB {
+	tx := r.DB.Begin(opts...)
+	r.Reset()
+	return tx
+}
+
+func (r *Repository[T]) Commit() *gorm.DB {
+	tx := r.DB.Commit()
+	r.Reset()
+	return tx
+}
+
+func (r *Repository[T]) Rollback() *gorm.DB {
+	tx := r.DB.Rollback()
+	r.Reset()
+	return tx
+}
+
+func (r *Repository[T]) Scan(dest interface{}) *gorm.DB {
+	tx := r.DB.Scan(dest)
+	r.Reset()
+	return tx
+}
+
+func (r *Repository[T]) ScanRows(rows *sql.Rows, dest interface{}) error {
+	err := r.DB.ScanRows(rows, dest)
+	r.Reset()
+	return err
+}
+
+func (r *Repository[T]) Exec(sql string, values ...interface{}) *gorm.DB {
+	tx := r.DB.Exec(sql, values...)
+	r.Reset()
+	return tx
+}
+
+func (r *Repository[T]) Raw(sql string, values ...interface{}) *gorm.DB {
+	tx := r.DB.Raw(sql, values...)
+	r.Reset()
+	return tx
+}
+
+func (r *Repository[T]) Row() *sql.Row {
+	row := r.DB.Row()
+	r.Reset()
+	return row
+}
+
+func (r *Repository[T]) Rows() (*sql.Rows, error) {
+	rows, err := r.DB.Rows()
+	r.Reset()
+	return rows, err
+}
+
+//-------------------以下对DB原生方法套壳-------------------------
 
 func (r *Repository[T]) Where(query interface{}, args ...interface{}) *Repository[T] {
 	r.DB = r.DB.Where(query, args...)
@@ -86,11 +187,6 @@ func (r *Repository[T]) Order(value interface{}) *Repository[T] {
 
 func (r *Repository[T]) Model(value interface{}) *Repository[T] {
 	r.DB = r.DB.Model(value)
-	return r
-}
-
-func (r *Repository[T]) Create(value interface{}) *Repository[T] {
-	r.DB = r.DB.Create(value)
 	return r
 }
 
@@ -129,31 +225,6 @@ func (r *Repository[T]) Joins(query string, args ...interface{}) *Repository[T] 
 	return r
 }
 
-func (r *Repository[T]) Save(value interface{}) *Repository[T] {
-	r.DB = r.DB.Save(value)
-	return r
-}
-
-func (r *Repository[T]) Updates(values interface{}) *Repository[T] {
-	r.DB = r.DB.Updates(values)
-	return r
-}
-
-func (r *Repository[T]) Update(column string, value interface{}) *Repository[T] {
-	r.DB = r.DB.Update(column, value)
-	return r
-}
-
-func (r *Repository[T]) UpdateColumn(column string, value interface{}) *Repository[T] {
-	r.DB = r.DB.UpdateColumn(column, value)
-	return r
-}
-
-func (r *Repository[T]) UpdateColumns(values interface{}) *Repository[T] {
-	r.DB = r.DB.UpdateColumns(values)
-	return r
-}
-
 func (r *Repository[T]) Group(name string) *Repository[T] {
 	r.DB = r.DB.Group(name)
 	return r
@@ -164,28 +235,8 @@ func (r *Repository[T]) Having(query interface{}, args ...interface{}) *Reposito
 	return r
 }
 
-func (r *Repository[T]) Delete(value interface{}, conds ...interface{}) *Repository[T] {
-	r.DB = r.DB.Delete(value, conds...)
-	return r
-}
-
 func (r *Repository[T]) Debug() *Repository[T] {
 	r.DB = r.DB.Debug()
-	return r
-}
-
-func (r *Repository[T]) Begin(opts ...*sql.TxOptions) *Repository[T] {
-	r.DB = r.DB.Begin(opts...)
-	return r
-}
-
-func (r *Repository[T]) Commit() *Repository[T] {
-	r.DB = r.DB.Commit()
-	return r
-}
-
-func (r *Repository[T]) Rollback() *Repository[T] {
-	r.DB = r.DB.Rollback()
 	return r
 }
 
@@ -248,12 +299,12 @@ func (r *Repository[T]) Transaction(fc func(tx *gorm.DB) error, opts ...*sql.TxO
 	return r.DB.Transaction(fc, opts...)
 }
 
-func (r *Repository[T]) Raw(sql string, values ...interface{}) *Repository[T] {
-	r.DB = r.DB.Raw(sql, values...)
+func (r *Repository[T]) Unscoped() *Repository[T] {
+	r.DB = r.DB.Unscoped()
 	return r
 }
 
-func (r *Repository[T]) Unscoped() *Repository[T] {
-	r.DB = r.DB.Unscoped()
+func (r *Repository[T]) Scopes(funcs ...func(*gorm.DB) *gorm.DB) *Repository[T] {
+	r.DB = r.DB.Scopes(funcs...)
 	return r
 }

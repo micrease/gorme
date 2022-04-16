@@ -28,7 +28,7 @@ func NewExampleRepo(db *gorm.DB) *ExampleRepo {
 }
 
 func (e *ExampleRepo) GetFirst() (ExampleModel, error) {
-	result, err := e.Select("id,age").Where("id>10").First()
+	result, err := e.Select("id,age").Where("id>10").GetOne()
 	fmt.Println(result.ID, result.Age, result.UserName, err)
 	return result, err
 }
@@ -36,7 +36,7 @@ func (e *ExampleRepo) GetFirst() (ExampleModel, error) {
 func (e *ExampleRepo) GetList() ([]ExampleModel, error) {
 	//result, err := e.Select("age").Offset(1).Limit(5).Order("id desc").Where("id<?", 40).Where("age > ?", 1).List()
 	//result, err := e.Limit(5).List()
-	result, err := e.List(3)
+	result, err := e.Order("id desc").List(3)
 	printList(result)
 	return result, err
 }
@@ -70,11 +70,11 @@ func main() {
 		db.Create(&ExampleModel{UserName: name, Age: age})
 	}
 
-	userRepo := NewExampleRepo(db)
-	userRepo.GetFirst()
-	userRepo.GetList()
-	userRepo.GetPaginateList()
+	exampleRepo := NewExampleRepo(db)
+	exampleRepo.GetFirst()
+	exampleRepo.GetList()
+	exampleRepo.GetPaginateList()
 
-	u, _ := userRepo.First()
+	u, _ := exampleRepo.First()
 	fmt.Println(u)
 }
