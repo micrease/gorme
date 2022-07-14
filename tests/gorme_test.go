@@ -12,6 +12,7 @@ import (
 )
 
 //这个一个例子
+//model/example.go
 type ExampleModel struct {
 	gorm.Model
 	UserName string
@@ -29,19 +30,21 @@ func (model ExampleModel) GetID() uint {
 }
 
 //举一个例子，ExampleRepo(可以换成你自己定义的Repo)继承gorme.Repository[T]
+//repo/example.go
 type ExampleRepo struct {
 	gorme.Repository[ExampleModel]
 }
 
-func NewExampleRepo(db *gorm.DB) *ExampleRepo {
+func NewExampleRepo() *ExampleRepo {
 	repo := ExampleRepo{}
+	db := GetDB()
 	repo.SetDB(db)
 	return &repo
 }
 
+//查询
 func TestQuery(t *testing.T) {
-	db := GetDB()
-	repo := NewExampleRepo(db)
+	repo := NewExampleRepo()
 	//链式where
 	builder := repo.NewQueryBuilder().Where("id>?", 20).Where("id!=?", 23)
 
@@ -73,8 +76,7 @@ func TestQuery(t *testing.T) {
 
 //插入或更新,ID存在就更新，不存在就插入,用Save()方法
 func TestInsertOrUpdate(t *testing.T) {
-	db := GetDB()
-	repo := NewExampleRepo(db)
+	repo := NewExampleRepo()
 	insertModel := repo.NewModelPtr()
 	insertModel.Age = 12
 	insertModel.UserName = "test1"
@@ -93,8 +95,7 @@ func TestInsertOrUpdate(t *testing.T) {
 
 //插入数据Create
 func TestInsert(t *testing.T) {
-	db := GetDB()
-	repo := NewExampleRepo(db)
+	repo := NewExampleRepo()
 	model := repo.NewModelPtr()
 	model.Age = 12
 	//model.ID = 1
@@ -106,9 +107,7 @@ func TestInsert(t *testing.T) {
 
 //更新，建议用Save方法
 func TestUpdate(t *testing.T) {
-	db := GetDB()
-	repo := NewExampleRepo(db)
-
+	repo := NewExampleRepo()
 	//常规Updates更新方式,0值不会更新
 	model := repo.NewModelPtr()
 	model.ID = 1
@@ -130,9 +129,7 @@ func TestUpdate(t *testing.T) {
 
 //根据查询条件,更新单个字段
 func TestUpdateSingleColumnWithQueryBuilder(t *testing.T) {
-	db := GetDB()
-	repo := NewExampleRepo(db)
-
+	repo := NewExampleRepo()
 	builder := repo.NewQueryBuilder().Where("id=?", 1)
 	err := repo.QueryWithBuilder(builder).Update("age", 11).Error
 	fmt.Println(err)
@@ -140,8 +137,7 @@ func TestUpdateSingleColumnWithQueryBuilder(t *testing.T) {
 
 //根据查询条件,更新Model中的多个字段
 func TestUpdateModelColumnWithQueryBuilder(t *testing.T) {
-	db := GetDB()
-	repo := NewExampleRepo(db)
+	repo := NewExampleRepo()
 	builder := repo.NewQueryBuilder().Where("id=?", 1)
 
 	model := repo.NewModelPtr()
@@ -155,8 +151,7 @@ func TestUpdateModelColumnWithQueryBuilder(t *testing.T) {
 
 //根据查询条件,更新动态多个字段
 func TestUpdateBySetterWithQueryBuilder(t *testing.T) {
-	db := GetDB()
-	repo := NewExampleRepo(db)
+	repo := NewExampleRepo()
 	builder := repo.NewQueryBuilder().Where("id=?", 1)
 	setter := repo.NewSetter().Set("age", 12).Set("user_name", "gggg")
 	err := repo.QueryWithBuilder(builder).Updates(setter).Error
@@ -165,17 +160,16 @@ func TestUpdateBySetterWithQueryBuilder(t *testing.T) {
 
 //根据查询条件,删除
 func TestDeleteByQueryBuilder(t *testing.T) {
-	db := GetDB()
-	repo := NewExampleRepo(db)
+	repo := NewExampleRepo()
 	builder := repo.NewQueryBuilder().Where("id=?", 2)
 	err := repo.QueryWithBuilder(builder).Delete().Error
 	fmt.Println(err)
 }
 
-//根据查询条件,删除
+//根据ID删除
 func TestDeleteID(t *testing.T) {
-	db := GetDB()
-	repo := NewExampleRepo(db)
+	repo := NewExampleRepo()
+	//单个ID
 	err := repo.Delete(2).Error
 	fmt.Println(err)
 
@@ -186,8 +180,7 @@ func TestDeleteID(t *testing.T) {
 
 //根据查询条件,软删除
 func TestSoftDeleteByQueryBuilder(t *testing.T) {
-	db := GetDB()
-	repo := NewExampleRepo(db)
+	repo := NewExampleRepo()
 	builder := repo.NewQueryBuilder().Where("id=?", 2)
 	err := repo.QueryWithBuilder(builder).DeleteSoft().Error
 	fmt.Println(err)
