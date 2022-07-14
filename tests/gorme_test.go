@@ -1,22 +1,31 @@
+package tests
 
-### GORME介绍
-
-gorme是一个对gorm进行泛型封装的orm工具,可以让代码变的更简单和优雅
-
-#### 安装方法
-```shell
-go get github.com/micrease/gorme
-```
-
-#### 使用示例
-更多方法请参考gorm官方文档,https://gorm.io/zh_CN/docs/
-```go
+import (
+	"fmt"
+	"github.com/micrease/gorme"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+	"log"
+	"testing"
+	"time"
+)
 
 //这个一个例子
 type ExampleModel struct {
 	gorm.Model
 	UserName string
 	Age      int
+}
+
+//自定义表名
+func (model ExampleModel) TableName() string {
+	return "tb_example"
+}
+
+//实现Model接口中获取主键的方法
+func (model ExampleModel) GetID() uint {
+	return model.ID
 }
 
 //举一个例子，ExampleRepo(可以换成你自己定义的Repo)继承gorme.Repository[T]
@@ -193,10 +202,3 @@ func GetDB() *gorm.DB {
 	}
 	return db
 }
-
-```
-***
-Golang微信交流群:![d51375dcd37a4ca27313349ae81657c](https://user-images.githubusercontent.com/5262407/162997469-0710afa6-73a1-40f7-85c1-66b5fc7b5377.png)   
-Golang QQ交流群:![Golang交流群群聊二维码](https://user-images.githubusercontent.com/5262407/162997718-635af855-7533-4c9d-a5a1-4a2b3139f898.png)
-
-

@@ -6,11 +6,30 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type Repository[T any] struct {
+type Model interface {
+	TableName() string
+	GetID() uint
+}
+
+type Repository[T Model] struct {
 	//一个初始干净的db
 	_initDB *gorm.DB
 	//如果继承的方式，无法形成链式结构x().y().Paginate(),因为x(),y()返回的是gorm.DB,而这个对象不具有Repository中的方法
 	DB *gorm.DB
+	//在增删改查时，存放的待处理数据
+	Data map[string]any
+}
+
+type Setter struct {
+	Data map[string]any
+}
+
+func (s Setter) Set(key string, value any) Setter {
+	if s.Data == nil {
+		s.Data = map[string]any{}
+	}
+	s.Data[key] = value
+	return s
 }
 
 func (r *Repository[T]) SetDB(db *gorm.DB) *Repository[T] {
@@ -75,6 +94,33 @@ func (r *Repository[T]) Paginate(pageNo int, pageSize int) (*PageResult[T], erro
 	return result, err
 }
 
+//======================================Query Builder=====================================
+func (r *Repository[T]) NewQueryBuilder() *gorm.DB {
+	r.Reset()
+	var t T
+	r.DB = r.DB.Model(&t)
+	return r.DB
+}
+
+func (r *Repository[T]) QueryWithBuilder(builder *gorm.DB) *Repository[T] {
+	r.DB = builder
+	return r
+}
+
+func (r *Repository[T]) NewModel() T {
+	var t T
+	return t
+}
+
+func (r *Repository[T]) NewSetter() Setter {
+	return Setter{}
+}
+
+func (r *Repository[T]) NewModelPtr() *T {
+	var t = new(T)
+	return t
+}
+
 //======================================最后调用的方法返回*gorm.DB,这样获取结果中的信息更方便一些=====================================
 
 func (r *Repository[T]) Create(value interface{}) *gorm.DB {
@@ -90,19 +136,26 @@ func (r *Repository[T]) Save(value interface{}) *gorm.DB {
 }
 
 func (r *Repository[T]) Updates(values interface{}) *gorm.DB {
-	tx := r.DB.Updates(values)
+	var tx *gorm.DB
+	if setter, ok := values.(Setter); ok {
+		tx = r.DB.Updates(setter.Data)
+	} else {
+		tx = r.DB.Updates(values)
+	}
 	r.Reset()
 	return tx
 }
 
 func (r *Repository[T]) Update(column string, value interface{}) *gorm.DB {
-	tx := r.DB.Update(column, value)
+	var t T
+	tx := r.DB.Update(column, value).Model(&t)
 	r.Reset()
 	return tx
 }
 
 func (r *Repository[T]) UpdateColumn(column string, value interface{}) *gorm.DB {
-	tx := r.DB.UpdateColumn(column, value)
+	var t T
+	tx := r.DB.Model(&t).UpdateColumn(column, value)
 	r.Reset()
 	return tx
 }
@@ -113,8 +166,17 @@ func (r *Repository[T]) UpdateColumns(values interface{}) *gorm.DB {
 	return tx
 }
 
-func (r *Repository[T]) Delete(value interface{}, conds ...interface{}) *gorm.DB {
-	tx := r.DB.Delete(value, conds...)
+func (r *Repository[T]) Delete(conds ...interface{}) *gorm.DB {
+	var t T
+	tx := r.DB.Unscoped().Delete(&t, conds...)
+	r.Reset()
+	return tx
+}
+
+//软删除,前提是有 Deleted gorm.DeletedAt
+func (r *Repository[T]) DeleteSoft(conds ...interface{}) *gorm.DB {
+	var t T
+	tx := r.DB.Delete(&t, conds...)
 	r.Reset()
 	return tx
 }
