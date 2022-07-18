@@ -25,8 +25,8 @@ func (model ExampleModel) TableName() string {
 }
 
 //实现Model接口中获取主键的方法
-func (model ExampleModel) GetID() uint {
-	return model.ID
+func (model ExampleModel) GetID() uint64 {
+	return uint64(model.ID)
 }
 
 //举一个例子，ExampleRepo(可以换成你自己定义的Repo)继承gorme.Repository[T]
