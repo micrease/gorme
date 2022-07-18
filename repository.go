@@ -8,7 +8,7 @@ import (
 
 type Model interface {
 	TableName() string
-	GetID() uint
+	GetID() uint64
 }
 
 type Repository[T Model] struct {
