@@ -2,13 +2,15 @@ package gorme
 
 import (
 	"database/sql"
+	"fmt"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"strings"
 )
 
 type Model interface {
 	TableName() string
-	GetID() uint64
+	GetID() any
 }
 
 type Repository[T Model] struct {
@@ -71,6 +73,34 @@ func (r *Repository[T]) Take() (T, error) {
 	return t, err
 }
 
+func (r *Repository[T]) Values(column ...string) ([]any, error) {
+	var pluckColumn string
+	if len(column) > 0 {
+		pluckColumn = column[0]
+	}
+
+	var values []any
+	err := r.DB.Pluck(pluckColumn, &values).Error
+	//把DB初始化
+	r.Reset()
+	return values, err
+}
+
+func (r *Repository[T]) DistinctValues(column string) ([]any, error) {
+	var values []any
+	err := r.DB.Distinct(column).Pluck(column, &values).Error
+	//把DB初始化
+	r.Reset()
+	return values, err
+}
+
+func (r *Repository[T]) Pluck(column string) ([]any, error) {
+	var values []any
+	err := r.DB.Pluck(column, &values).Error
+	r.Reset()
+	return values, err
+}
+
 func (r *Repository[T]) List(args ...int) ([]T, error) {
 	if len(args) > 1 {
 		panic("the number of args cannot exceed 1")
@@ -94,12 +124,19 @@ func (r *Repository[T]) Paginate(pageNo int, pageSize int) (*PageResult[T], erro
 	return result, err
 }
 
-//======================================Query Builder=====================================
+// ======================================Query Builder=====================================
 func (r *Repository[T]) NewQueryBuilder() *gorm.DB {
 	r.Reset()
 	var t T
 	r.DB = r.DB.Model(&t)
 	return r.DB
+}
+
+func (r *Repository[T]) NewQuery() *Repository[T] {
+	r.Reset()
+	var t T
+	r.DB = r.DB.Model(&t)
+	return r
 }
 
 func (r *Repository[T]) QueryWithBuilder(builder *gorm.DB) *Repository[T] {
@@ -173,7 +210,7 @@ func (r *Repository[T]) Delete(conds ...interface{}) *gorm.DB {
 	return tx
 }
 
-//软删除,前提是有 Deleted gorm.DeletedAt
+// 软删除,前提是有 Deleted gorm.DeletedAt
 func (r *Repository[T]) DeleteSoft(conds ...interface{}) *gorm.DB {
 	var t T
 	tx := r.DB.Delete(&t, conds...)
@@ -235,9 +272,214 @@ func (r *Repository[T]) Rows() (*sql.Rows, error) {
 	return rows, err
 }
 
+// -------------------以下Where查询方式-------------------------
+func (r *Repository[T]) Or(query any, args ...interface{}) *Repository[T] {
+	return r.OrWhere(query, args...)
+}
+
+func (r *Repository[T]) OrWhere(query any, args ...interface{}) *Repository[T] {
+	switch query.(type) {
+	case string:
+		argsLen := len(args)
+		if argsLen == 0 {
+			return r.OrRaw(query, args...)
+		}
+
+		queryStr, _ := query.(string)
+		if strings.Contains(queryStr, "?") {
+			return r.OrRaw(queryStr, args...)
+		}
+
+		expr := "="
+		var value any
+		if argsLen == 1 {
+			value = args[0]
+		} else if argsLen > 1 {
+			value = args[1]
+			expr = fmt.Sprintf("%v", args[0])
+			if strings.ToUpper(expr) == "IN" {
+				return r.OrWhereIn(queryStr, args[1])
+			}
+		}
+		queryExpr := queryStr + expr + "?"
+		r.DB = r.DB.Or(queryExpr, value)
+	case func():
+		f, _ := query.(func())
+		oldDB := r.DB
+		r.Reset()
+		f()
+		r.DB = oldDB.Or(r.DB)
+	}
+	return r
+}
+
+func (r *Repository[T]) Where(query any, args ...interface{}) *Repository[T] {
+	switch query.(type) {
+	case string:
+		argsLen := len(args)
+		if argsLen == 0 {
+			return r.WhereRaw(query, args...)
+		}
+
+		queryStr, _ := query.(string)
+		if strings.Contains(queryStr, "?") {
+			return r.WhereRaw(queryStr, args...)
+		}
+
+		expr := "="
+		var value any
+		if argsLen == 1 {
+			value = args[0]
+		} else if argsLen > 1 {
+			value = args[1]
+			expr = fmt.Sprintf("%v", args[0])
+			if strings.ToUpper(expr) == "IN" {
+				return r.WhereIn(queryStr, args[1])
+			}
+		}
+		queryExpr := queryStr + expr + "?"
+		r.DB = r.DB.Where(queryExpr, value)
+	case func():
+		f, _ := query.(func())
+		oldDB := r.DB
+		r.Reset()
+		f()
+		r.DB = oldDB.Where(r.DB)
+	}
+	return r
+}
+
+func (r *Repository[T]) WhereIn(column string, args interface{}) *Repository[T] {
+	var values any
+	switch args.(type) {
+	case string:
+		values = strings.Split(args.(string), ",")
+	default:
+		values = args
+	}
+	r.DB = r.DB.Where(column+" IN(?) ", values)
+	return r
+}
+
+func (r *Repository[T]) OrWhereIn(column string, args interface{}) *Repository[T] {
+	var values any
+	switch args.(type) {
+	case string:
+		values = strings.Split(args.(string), ",")
+	default:
+		values = args
+	}
+	r.DB = r.DB.Or(column+" IN(?) ", values)
+	return r
+}
+
+func (r *Repository[T]) WhereNotIn(column string, args interface{}) *Repository[T] {
+	var values any
+	switch args.(type) {
+	case string:
+		values = strings.Split(args.(string), ",")
+	default:
+		values = args
+	}
+	r.DB = r.DB.Where(column+" NOT IN(?) ", values)
+	return r
+}
+
+func (r *Repository[T]) NotIn(column string, args interface{}) *Repository[T] {
+	return r.WhereNotIn(column, args)
+}
+
+func (r *Repository[T]) In(column string, args interface{}) *Repository[T] {
+	return r.WhereIn(column, args)
+}
+
+func (r *Repository[T]) FindInSet(column string, set any) *Repository[T] {
+	r.DB = r.DB.Where("FIND_IN_SET(?,`"+column+"`)", set)
+	return r
+}
+
+func (r *Repository[T]) Between(column string, value1, value2 any) *Repository[T] {
+	r.DB = r.DB.Where(column+" BETWEEN ? AND ? ", value1, value2)
+	return r
+}
+
+func (r *Repository[T]) NotBetween(column string, value1, value2 any) *Repository[T] {
+	r.DB = r.DB.Where(column+" NOT BETWEEN ? AND ? ", value1, value2)
+	return r
+}
+
+func (r *Repository[T]) Eq(key string, value any) *Repository[T] {
+	r.DB = r.DB.Where(key+" =? ", value)
+	return r
+}
+
+func (r *Repository[T]) Neq(key string, value any) *Repository[T] {
+	r.DB = r.DB.Where(key+" !=? ", value)
+	return r
+}
+
+func (r *Repository[T]) Gt(key string, value any) *Repository[T] {
+	r.DB = r.DB.Where(key+" >? ", value)
+	return r
+}
+
+func (r *Repository[T]) Ge(key string, value any) *Repository[T] {
+	r.DB = r.DB.Where(key+" >=? ", value)
+	return r
+}
+
+func (r *Repository[T]) Lt(key string, value any) *Repository[T] {
+	r.DB = r.DB.Where(key+" <? ", value)
+	return r
+}
+
+func (r *Repository[T]) Le(key string, value any) *Repository[T] {
+	r.DB = r.DB.Where(key+" <=? ", value)
+	return r
+}
+
+func (r *Repository[T]) Like(key string, value string) *Repository[T] {
+	r.DB = r.DB.Where(key+" LIKE ? ", "%"+value+"%")
+	return r
+}
+
+func (r *Repository[T]) LikeLeft(key string, value string) *Repository[T] {
+	r.DB = r.DB.Where(key+" LIKE ? ", "%"+value)
+	return r
+}
+
+func (r *Repository[T]) LikeRight(key string, value string) *Repository[T] {
+	r.DB = r.DB.Where(key+" LIKE ? ", value+"%")
+	return r
+}
+
+func (r *Repository[T]) NotLike(key string, value string) *Repository[T] {
+	r.DB = r.DB.Where(key+" NOT LIKE ? ", "%"+value+"%")
+	return r
+}
+
+func (r *Repository[T]) NotLikeLeft(key string, value string) *Repository[T] {
+	r.DB = r.DB.Where(key+" NOT LIKE ? ", "%"+value)
+	return r
+}
+func (r *Repository[T]) NotLikeRight(key string, value string) *Repository[T] {
+	r.DB = r.DB.Where(key+" NOT LIKE ? ", value+"%")
+	return r
+}
+
+func (r *Repository[T]) IsNull(key string) *Repository[T] {
+	r.DB = r.DB.Where(key + " IS NULL ")
+	return r
+}
+
+func (r *Repository[T]) IsNotNull(key string) *Repository[T] {
+	r.DB = r.DB.Where(key + " IS NOT NULL ")
+	return r
+}
+
 //-------------------以下对DB原生方法套壳-------------------------
 
-func (r *Repository[T]) Where(query interface{}, args ...interface{}) *Repository[T] {
+func (r *Repository[T]) WhereRaw(query interface{}, args ...interface{}) *Repository[T] {
 	r.DB = r.DB.Where(query, args...)
 	return r
 }
@@ -252,8 +494,8 @@ func (r *Repository[T]) Model(value interface{}) *Repository[T] {
 	return r
 }
 
-func (r *Repository[T]) Or(value interface{}) *Repository[T] {
-	r.DB = r.DB.Or(value)
+func (r *Repository[T]) OrRaw(query interface{}, args ...interface{}) *Repository[T] {
+	r.DB = r.DB.Or(query, args...)
 	return r
 }
 
@@ -324,11 +566,6 @@ func (r *Repository[T]) FirstOrCreate(dest interface{}, conds ...interface{}) *R
 
 func (r *Repository[T]) FirstOrInit(dest interface{}, conds ...interface{}) *Repository[T] {
 	r.DB = r.DB.FirstOrInit(dest, conds...)
-	return r
-}
-
-func (r *Repository[T]) Pluck(column string, dest interface{}) *Repository[T] {
-	r.DB = r.DB.Pluck(column, dest)
 	return r
 }
 
