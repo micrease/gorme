@@ -10,6 +10,22 @@ go get github.com/micrease/gorme
 
 #### 使用示例
 更多方法请参考gorm官方文档,https://gorm.io/zh_CN/docs/
+
+简单使用
+```go
+query := repo.NewQuery()
+// SELECT * FROM `tb_example` WHERE age IN(20,21)  AND age >10  AND (age =20  OR age=23 OR (age=1 AND age=2)) AND `tb_example`.`deleted_at` IS NULL LIMIT 10
+pageList, err := query.WhereIn("age", []any{20, 21}).
+    Gt("age", 10).
+    Where(func() {
+        query.Eq("age", 20).
+        Or("age=?", 23).Or(func() {
+            query.Where("age", 1).Where("age", 2)
+        })
+    }).Paginate(1, 10)
+fmt.Println(pageList, err)
+```
+更多使用方法
 ```go
 package tests
 
@@ -24,23 +40,24 @@ import (
 	"time"
 )
 
-//这个一个例子
-//model/example.go
+// 这个一个例子
+// model/example.go
 type ExampleModel struct {
 	gorm.Model
 	UserName string
 	Age      int
 }
 
-//自定义表名
+// 自定义表名
 func (model ExampleModel) TableName() string {
 	return "tb_example"
 }
 
-//实现Model接口中获取主键的方法
-func (model ExampleModel) GetID() uint {
+// 实现Model接口中获取主键的方法
+func (model ExampleModel) GetID() any {
 	return model.ID
 }
+
 
 //举一个例子，ExampleRepo(可以换成你自己定义的Repo)继承gorme.Repository[T]
 //repo/example.go
