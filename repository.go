@@ -42,6 +42,8 @@ func (r *Repository[T]) SetDB(db *gorm.DB) *Repository[T] {
 
 func (r *Repository[T]) Reset() *Repository[T] {
 	r.DB = r._initDB
+	var t T
+	r.DB = r.DB.Model(&t)
 	return r
 }
 
@@ -127,15 +129,11 @@ func (r *Repository[T]) Paginate(pageNo int, pageSize int) (*PageResult[T], erro
 // ======================================Query Builder=====================================
 func (r *Repository[T]) NewQueryBuilder() *gorm.DB {
 	r.Reset()
-	var t T
-	r.DB = r.DB.Model(&t)
 	return r.DB
 }
 
 func (r *Repository[T]) NewQuery() *Repository[T] {
 	r.Reset()
-	var t T
-	r.DB = r.DB.Model(&t)
 	return r
 }
 
