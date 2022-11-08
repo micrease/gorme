@@ -39,7 +39,7 @@ repo.NewQuery().Where("name", "IN", "张三,李四" ).First()
 更多看tests用例
 ```
 
-使用gorm原生方法
+builder方式使用gorm原生方法
 ```go
 package tests
 
