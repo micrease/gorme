@@ -25,7 +25,21 @@ pageList, err := query.WhereIn("age", []any{20, 21}).
     }).Paginate(1, 10)
 fmt.Println(pageList, err)
 ```
-更多使用方法
+多种写法
+```go
+//相等条件
+repo.NewQuery().Where("age", 20).First()
+repo.NewQuery().Where("age", "=", 20).First()
+repo.NewQuery().Where("age=?", 20).First()
+repo.NewQuery().Eq("age", 20).First()
+
+repo.NewQuery().Where("age", ">", 20).First()
+repo.NewQuery().Where("name", "IN", "张三,李四" ).First()
+...
+更多看tests用例
+```
+
+使用gorm原生方法
 ```go
 package tests
 

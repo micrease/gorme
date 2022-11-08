@@ -74,6 +74,16 @@ func TestQuery(t *testing.T) {
 	}
 }
 
+// 查询
+func TestQueryPage(t *testing.T) {
+	repo := NewExampleRepo()
+	page, err := repo.NewQuery().Where("id", ">", 20).Order("id desc").Paginate(1, 10)
+	fmt.Println(page.PageNo, page.PageSize, page.TotalPage, page.TotalSize)
+	for _, row := range page.List {
+		fmt.Println(row.ID, row.UserName, row.Age, err)
+	}
+}
+
 // 查询单值集合
 func TestValues(t *testing.T) {
 	repo := NewExampleRepo()

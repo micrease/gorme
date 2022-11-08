@@ -79,7 +79,7 @@ func PaginateQuery[T any](query *gorm.DB, page PageQuery) (*PageResult[T], error
 
 	offset := (page.PageNo - 1) * page.PageSize
 	var rows []*T
-	err := query.Limit(page.PageSize).Offset(offset).Find(&rows).Count(&result.TotalSize).Error
+	err := query.Count(&result.TotalSize).Limit(page.PageSize).Offset(offset).Find(&rows).Error
 	if (int(result.TotalSize) % page.PageSize) > 0 {
 		result.TotalPage = result.TotalSize/int64(page.PageSize) + 1
 	} else {
@@ -90,14 +90,14 @@ func PaginateQuery[T any](query *gorm.DB, page PageQuery) (*PageResult[T], error
 	return result, err
 }
 
-//查询列表
+// 查询列表
 func List[T any](query *gorm.DB) ([]T, error) {
 	var rows []T
 	err := query.Find(&rows).Error
 	return rows, err
 }
 
-//查询单个对象
+// 查询单个对象
 func GetOne[T any](query *gorm.DB) (T, error) {
 	return Take[T](query)
 }
@@ -108,14 +108,14 @@ func Take[T any](query *gorm.DB) (T, error) {
 	return row, err
 }
 
-//第一条记录
+// 第一条记录
 func First[T any](query *gorm.DB) (T, error) {
 	var row T
 	err := query.First(&row).Error
 	return row, err
 }
 
-//最后一条记录
+// 最后一条记录
 func Last[T any](query *gorm.DB) (T, error) {
 	var row T
 	err := query.Last(&row).Error
