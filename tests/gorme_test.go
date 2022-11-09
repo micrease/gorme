@@ -165,14 +165,11 @@ func TestOrFunc(t *testing.T) {
 	repo := NewExampleRepo()
 	query := repo.NewQuery()
 	// SELECT * FROM `tb_example` WHERE age IN(20,21)  AND age >10  AND (age =20  OR age=23 OR (age=1 AND age=2)) AND `tb_example`.`deleted_at` IS NULL LIMIT 10
-	pageList, err := query.WhereIn("age", []any{20, 21}).
-		Gt("age", 10).
-		Where(func() {
-			query.Eq("age", 20).
-				Or("age=?", 23).Or(func() {
-				query.Where("age", 1).Where("age", 2)
-			})
-		}).Paginate(1, 10)
+	pageList, err := query.WhereIn("age", []any{20, 21}).Gt("age", 10).Where(func() {
+		query.Eq("age", 20).Or("age=?", 23).Or(func() {
+			query.Where("age", 1).Where("age", 2)
+		})
+	}).Paginate(1, 10)
 	fmt.Println(pageList, err)
 }
 
