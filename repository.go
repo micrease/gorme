@@ -15,9 +15,9 @@ type Model interface {
 
 type Repository[T Model] struct {
 	//一个初始干净的db
-	_initDB *gorm.DB
-	//如果继承的方式，无法形成链式结构x().y().Paginate(),因为x(),y()返回的是gorm.DB,而这个对象不具有Repository中的方法
 	DB *gorm.DB
+	//如果继承的方式，无法形成链式结构x().y().Paginate(),因为x(),y()返回的是gorm.DB,而这个对象不具有Repository中的方法
+	Query *sql.DB
 	//在增删改查时，存放的待处理数据
 	Data map[string]any
 }
@@ -36,14 +36,11 @@ func (s Setter) Set(key string, value any) Setter {
 
 func (r *Repository[T]) SetDB(db *gorm.DB) *Repository[T] {
 	r.DB = db
-	r._initDB = db
 	return r
 }
 
 func (r *Repository[T]) Reset() *Repository[T] {
-	r.DB = r._initDB
-	var t T
-	r.DB = r.DB.Model(&t)
+	r.DB.Statement.Clauses = map[string]clause.Clause{}
 	return r
 }
 
@@ -128,12 +125,16 @@ func (r *Repository[T]) Paginate(pageNo int, pageSize int) (*PageResult[T], erro
 
 // ======================================Query Builder=====================================
 func (r *Repository[T]) NewQueryBuilder() *gorm.DB {
-	r.Reset()
+	var t T
+	r.DB.Statement.Clauses = map[string]clause.Clause{}
+	r.DB = r.DB.Model(&t)
 	return r.DB
 }
 
 func (r *Repository[T]) NewQuery() *Repository[T] {
-	r.Reset()
+	var t T
+	r.DB.Statement.Clauses = map[string]clause.Clause{}
+	r.DB = r.DB.Model(&t)
 	return r
 }
 
@@ -160,13 +161,11 @@ func (r *Repository[T]) NewModelPtr() *T {
 
 func (r *Repository[T]) Create(value interface{}) *gorm.DB {
 	tx := r.DB.Create(value)
-	r.Reset()
 	return tx
 }
 
 func (r *Repository[T]) Save(value interface{}) *gorm.DB {
 	tx := r.DB.Save(value)
-	r.Reset()
 	return tx
 }
 

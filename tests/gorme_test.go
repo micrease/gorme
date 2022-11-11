@@ -96,7 +96,7 @@ func TestValues(t *testing.T) {
 
 	//查询时去重
 	//SELECT DISTINCT `age` FROM `tb_example` WHERE id>20 AND id!=23 AND `tb_example`.`deleted_at` IS NULL LIMIT 10
-	ages, err = repo.QueryWithBuilder(builder).DistinctValues("age")
+	ages, err = repo.QueryWithBuilder(builder).Limit(10).WhereRaw("age>?", 20).DistinctValues("age")
 	fmt.Println(ages, err)
 
 	//不使用builder
@@ -212,18 +212,19 @@ func TestQuery2(t *testing.T) {
 func TestInsertOrUpdate(t *testing.T) {
 	repo := NewExampleRepo()
 	insertModel := repo.NewModelPtr()
+	insertModel.ID = 0
 	insertModel.Age = 12
 	insertModel.UserName = "test1"
 	insertModel.CreatedAt = time.Now()
 	err := repo.Save(insertModel).Error
 	fmt.Println(insertModel.ID, err)
 
-	updateModel := repo.NewModelPtr()
+	updateModel := repo.NewModel()
 	updateModel.Age = 12
-	updateModel.ID = 1
+	updateModel.ID = 400
 	updateModel.UserName = "test1"
 	updateModel.CreatedAt = time.Now()
-	err = repo.Save(updateModel).Error
+	err = repo.Save(&updateModel).Error
 	fmt.Println(updateModel.ID, err)
 }
 
@@ -320,12 +321,17 @@ func TestSoftDeleteByQueryBuilder(t *testing.T) {
 	fmt.Println(err)
 }
 
+var gDB *gorm.DB
+
 func GetDB() *gorm.DB {
-	dsn := "gorme:123456@tcp(127.0.0.1:3306)/gorme?charset=utf8mb4&parseTime=True&loc=Local"
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info)})
-	if err != nil {
-		log.Fatalln("连接数据库失败")
+	if gDB == nil {
+		dsn := "gorme:123456@tcp(127.0.0.1:3306)/gorme?charset=utf8mb4&parseTime=True&loc=Local"
+		db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+			Logger: logger.Default.LogMode(logger.Info)})
+		if err != nil {
+			log.Fatalln("连接数据库失败")
+		}
+		gDB = db
 	}
-	return db
+	return gDB
 }
