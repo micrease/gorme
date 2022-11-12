@@ -170,7 +170,12 @@ func TestOrFunc(t *testing.T) {
 			query.Where("age", 1).Where("age", 2)
 		})
 	}).Paginate(1, 10)
+
 	fmt.Println(pageList, err)
+	for _, item := range pageList.List {
+		fmt.Println(item)
+	}
+
 }
 
 func TestQuery2(t *testing.T) {

@@ -40,7 +40,11 @@ func (r *Repository[T]) SetDB(db *gorm.DB) *Repository[T] {
 }
 
 func (r *Repository[T]) Reset() *Repository[T] {
+	tmp := r.DB.Statement
+	oldStatement := *tmp
+	r.DB.Statement = &oldStatement
 	r.DB.Statement.Clauses = map[string]clause.Clause{}
+	r.DB.Statement.Preloads = map[string][]interface{}{}
 	return r
 }
 
@@ -302,7 +306,8 @@ func (r *Repository[T]) OrWhere(query any, args ...interface{}) *Repository[T] {
 		r.DB = r.DB.Or(queryExpr, value)
 	case func():
 		f, _ := query.(func())
-		oldDB := r.DB
+		tmp := *r.DB
+		oldDB := &tmp
 		r.Reset()
 		f()
 		r.DB = oldDB.Or(r.DB)
@@ -338,8 +343,11 @@ func (r *Repository[T]) Where(query any, args ...interface{}) *Repository[T] {
 		r.DB = r.DB.Where(queryExpr, value)
 	case func():
 		f, _ := query.(func())
-		oldDB := r.DB
+		tmp := *r.DB
+		oldDB := &tmp
 		r.Reset()
+		fmt.Println(oldDB, r.DB)
+
 		f()
 		r.DB = oldDB.Where(r.DB)
 	}
