@@ -53,7 +53,18 @@ func (r *Repository[T]) First() (T, error) {
 	err := r.DB.First(&t).Error
 	//把DB初始化
 	r.Reset()
-	return t, err
+	return t, r.IgnoreError(err)
+}
+
+func (r *Repository[T]) IgnoreError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	if err == gorm.ErrRecordNotFound {
+		return nil
+	}
+	return err
 }
 
 func (r *Repository[T]) Last() (T, error) {
@@ -61,7 +72,7 @@ func (r *Repository[T]) Last() (T, error) {
 	err := r.DB.Last(&t).Error
 	//把DB初始化
 	r.Reset()
-	return t, err
+	return t, r.IgnoreError(err)
 }
 
 func (r *Repository[T]) GetOne() (T, error) {
@@ -73,7 +84,7 @@ func (r *Repository[T]) Take() (T, error) {
 	err := r.DB.Take(&t).Error
 	//把DB初始化
 	r.Reset()
-	return t, err
+	return t, r.IgnoreError(err)
 }
 
 func (r *Repository[T]) Values(column ...string) ([]any, error) {
@@ -86,7 +97,7 @@ func (r *Repository[T]) Values(column ...string) ([]any, error) {
 	err := r.DB.Pluck(pluckColumn, &values).Error
 	//把DB初始化
 	r.Reset()
-	return values, err
+	return values, r.IgnoreError(err)
 }
 
 func (r *Repository[T]) DistinctValues(column string) ([]any, error) {
@@ -94,14 +105,14 @@ func (r *Repository[T]) DistinctValues(column string) ([]any, error) {
 	err := r.DB.Distinct(column).Pluck(column, &values).Error
 	//把DB初始化
 	r.Reset()
-	return values, err
+	return values, r.IgnoreError(err)
 }
 
 func (r *Repository[T]) Pluck(column string) ([]any, error) {
 	var values []any
 	err := r.DB.Pluck(column, &values).Error
 	r.Reset()
-	return values, err
+	return values, r.IgnoreError(err)
 }
 
 func (r *Repository[T]) List(args ...int) ([]T, error) {
@@ -117,28 +128,28 @@ func (r *Repository[T]) List(args ...int) ([]T, error) {
 	err := r.DB.Find(&t).Error
 	//DB初始化
 	r.Reset()
-	return t, err
+	return t, r.IgnoreError(err)
 }
 
 func (r *Repository[T]) Paginate(pageNo int, pageSize int) (*PageResult[T], error) {
 	result, err := Paginate[T](r.DB, pageNo, pageSize)
 	//把DB初始化
 	r.Reset()
-	return result, err
+	return result, r.IgnoreError(err)
 }
 
 // ======================================Query Builder=====================================
 func (r *Repository[T]) NewQueryBuilder() *gorm.DB {
 	var t T
 	r.DB.Statement.Clauses = map[string]clause.Clause{}
-	r.DB = r.DB.Model(&t)
+	r.DB = r.DB.Model(&t).Table(t.TableName())
 	return r.DB
 }
 
 func (r *Repository[T]) NewQuery() *Repository[T] {
 	var t T
 	r.DB.Statement.Clauses = map[string]clause.Clause{}
-	r.DB = r.DB.Model(&t)
+	r.DB = r.DB.Model(&t).Table(t.TableName())
 	return r
 }
 
@@ -147,7 +158,7 @@ func (r *Repository[T]) QueryWithBuilder(builder *gorm.DB) *Repository[T] {
 	return r
 }
 
-func (r *Repository[T]) NewModel() T {
+func (r *Repository[T]) NewModelValue() T {
 	var t T
 	return t
 }
@@ -156,7 +167,7 @@ func (r *Repository[T]) NewSetter() Setter {
 	return Setter{}
 }
 
-func (r *Repository[T]) NewModelPtr() *T {
+func (r *Repository[T]) NewModel() *T {
 	var t = new(T)
 	return t
 }
