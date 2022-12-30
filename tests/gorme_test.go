@@ -39,15 +39,15 @@ func TestQueryPamount(t *testing.T) {
 func TestValues(t *testing.T) {
 	repo := NewOrderRepo()
 	//链式where
-	builder := repo.NewQueryBuilder().Limit(10).Where("id>?", 20).Where("id!=?", 23)
+	query := repo.NewQuery().Limit(10).Where("id>?", 20).Where("id!=?", 23)
 	//查询所有值
 	// SELECT `amount` FROM `tb_example` WHERE id>20 AND id!=23 AND `tb_example`.`deleted_at` IS NULL LIMIT 10
-	amounts, err := repo.QueryWithBuilder(builder).Values("amount")
+	amounts, err := query.Values("amount")
 	fmt.Println(amounts, err)
 
 	//查询时去重
 	//SELECT DISTINCT `amount` FROM `tb_example` WHERE id>20 AND id!=23 AND `tb_example`.`deleted_at` IS NULL LIMIT 10
-	amounts, err = repo.QueryWithBuilder(builder).Limit(10).WhereRaw("amount>?", 20).DistinctValues("amount")
+	amounts, err = query.Limit(10).WhereRaw("amount>?", 20).DistinctValues("amount")
 	fmt.Println(amounts, err)
 
 	//不使用builder
@@ -218,41 +218,45 @@ func TestUpdate(t *testing.T) {
 }
 
 // 根据查询条件,更新单个字段
+// UPDATE `tb_order` SET `amount`=11,`updated_at`='2022-12-30 14:43:01.11' WHERE id=1 AND `tb_order`.`deleted_at` IS NULL
 func TestUpdateSingleColumnWithQueryBuilder(t *testing.T) {
 	repo := NewOrderRepo()
-	builder := repo.NewQueryBuilder().Where("id=?", 1)
-	err := repo.QueryWithBuilder(builder).Update("amount", 11).Error
+	query := repo.NewQuery().Where("id=?", 1)
+	err := query.Update("amount", 11).Error
 	fmt.Println(err)
 }
 
 // 根据查询条件,更新Model中的多个字段
+// UPDATE `tb_order` SET `updated_at`='2022-12-30 14:44:39.426',`amount`=100 WHERE id=1 AND `tb_order`.`deleted_at` IS NULL
 func TestUpdateModelColumnWithQueryBuilder(t *testing.T) {
 	repo := NewOrderRepo()
-	builder := repo.NewQueryBuilder().Where("id=?", 1)
+	query := repo.NewQuery().Where("id=?", 1)
 
 	model := repo.NewModel()
 	model.Amount = 100 //0值不会更新
 	model.UserId = 100 //空值不会更新
 	model.CreatedAt = time.Now()
-	err := repo.QueryWithBuilder(builder).Select("amount", "user_name").Updates(model)
+	err := query.Select("amount", "user_name").Updates(model)
 	fmt.Println(err)
 	//UPDATE `example_models` SET `updated_at`='2022-07-14 17:00:28.43',`user_name`='test100',`amount`=100 WHERE id=1 AND `example_models`.`deleted_at` IS NULL
 }
 
 // 根据查询条件,更新动态多个字段
+// UPDATE `tb_order` SET `amount`=12,`goods_name`='gggg',`updated_at`='2022-12-30 14:46:25.922' WHERE id=1 AND `tb_order`.`deleted_at` IS NULL
 func TestUpdateBySetterWithQueryBuilder(t *testing.T) {
 	repo := NewOrderRepo()
-	builder := repo.NewQueryBuilder().Where("id=?", 1)
-	setter := repo.NewSetter().Set("amount", 12).Set("user_name", "gggg")
-	err := repo.QueryWithBuilder(builder).Updates(setter).Error
+	query := repo.NewQuery().Where("id=?", 1)
+	setter := query.NewSetter().Set("amount", 12).Set("goods_name", "gggg")
+	err := query.Updates(setter).Error
 	fmt.Println(err)
 }
 
 // 根据查询条件,删除
+// DELETE FROM `tb_order` WHERE id=2
 func TestDeleteByQueryBuilder(t *testing.T) {
 	repo := NewOrderRepo()
-	builder := repo.NewQueryBuilder().Where("id=?", 2)
-	err := repo.QueryWithBuilder(builder).Delete().Error
+	query := repo.NewQuery().Where("id=?", 2)
+	err := query.Delete().Error
 	fmt.Println(err)
 }
 
@@ -269,10 +273,11 @@ func TestDeleteID(t *testing.T) {
 }
 
 // 根据查询条件,软删除
+// UPDATE `tb_order` SET `deleted_at`='2022-12-30 14:47:55.504' WHERE id=2 AND `tb_order`.`deleted_at` IS NULL
 func TestSoftDeleteByQueryBuilder(t *testing.T) {
 	repo := NewOrderRepo()
-	builder := repo.NewQueryBuilder().Where("id=?", 2)
-	err := repo.QueryWithBuilder(builder).DeleteSoft().Error
+	query := repo.NewQuery().Where("id=?", 2)
+	err := query.DeleteSoft().Error
 	fmt.Println(err)
 }
 
