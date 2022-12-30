@@ -83,35 +83,21 @@ func NewExampleRepo() *ExampleRepo {
 	return &repo
 }
 
-//查询
 func TestQuery(t *testing.T) {
-	repo := NewExampleRepo()
+	repo := NewOrderRepo()
 	//链式where
-	builder := repo.NewQueryBuilder().Where("id>?", 20).Where("id!=?", 23)
-
+	query := repo.NewQuery().Where("id > ?", 20).Where("id != ?", 23)
 	//动态条件
-	age := 19
-	if age >= 18 {
-		builder = builder.Where("age>=?", age)
+	amount := 1
+	if amount >= 18 {
+		query = query.Where("amount>=?", amount)
 	}
 
 	//查询列表
-	list, err := repo.QueryWithBuilder(builder).List(2)
+	list, err := query.List(2)
+	fmt.Println(err)
 	for _, row := range list {
-		fmt.Println(row.ID, row.UserName, row.Age)
-	}
-
-	//查询一条数据
-	builder = repo.NewQueryBuilder().Where("id=?", 20)
-	model, err := repo.QueryWithBuilder(builder).First()
-	fmt.Println(model.ID, model.UserName, err)
-
-	//查询分页,第1页，每页10条
-	builder = repo.NewQueryBuilder().Where("id>?", 20).Order("id desc")
-	page, err := repo.QueryWithBuilder(builder).Paginate(1, 10)
-	fmt.Println(page.PageNo, page.PageSize, page.TotalPage, page.TotalSize)
-	for _, row := range page.List {
-		fmt.Println(row.ID, row.UserName, row.Age)
+		fmt.Println(row.ID, row.UserId, row.Amount)
 	}
 }
 
@@ -225,6 +211,20 @@ func TestSoftDeleteByQueryBuilder(t *testing.T) {
 	builder := repo.NewQueryBuilder().Where("id=?", 2)
 	err := repo.QueryWithBuilder(builder).DeleteSoft().Error
 	fmt.Println(err)
+}
+
+func TestJoin(t *testing.T) {
+	list, err := NewOrderSummaryRepo().NewQuery().Select("u.id as user_id,u.user_name as username").Where("u.id=?", 10).List(10)
+	fmt.Println(list, err)
+}
+
+// SELECT u.id as user_id,u.user_name as username,count(*) as count FROM tb_user as u left join tb_order as o on o.user_id=u.id WHERE u.id=10 GROUP BY `u`.`id` HAVING count<10 LIMIT 10
+func TestSummary(t *testing.T) {
+	list, err := NewOrderSummaryRepo().NewQuery().
+		Select("u.id as user_id,u.user_name as username,count(*) as count").Where("u.id=?", 10).
+		Group("u.id").Having("count<10").
+		List(10)
+	fmt.Println(list, err)
 }
 
 func GetDB() *gorm.DB {

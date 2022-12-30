@@ -10,8 +10,7 @@ import (
 func TestQuery(t *testing.T) {
 	repo := NewOrderRepo()
 	//链式where
-	query := repo.NewQuery().Where("id>?", 20).Where("id!=?", 23)
-
+	query := repo.NewQuery().Where("id > ?", 20).Where("id != ?", 23)
 	//动态条件
 	amount := 1
 	if amount >= 18 {
@@ -117,26 +116,22 @@ func TestOrFunc(t *testing.T) {
 	repo := NewOrderRepo()
 	query := repo.NewQuery()
 	// SELECT * FROM `tb_example` WHERE amount IN(20,21)  AND amount >10  AND (amount =20  OR amount=23 OR (amount=1 AND amount=2)) AND `tb_example`.`deleted_at` IS NULL LIMIT 10
-	pamountList, err := query.WhereIn("amount", []any{20, 21}).Gt("amount", 10).Where(func() {
+	page, err := query.WhereIn("amount", []any{20, 21}).Gt("amount", 10).Where(func() {
 		query.Eq("amount", 20).Or("amount=?", 23).Or(func() {
 			query.Where("amount", 1).Where("amount", 2)
 		})
 	}).Paginate(1, 10)
 
-	fmt.Println(pamountList, err)
-	for _, item := range pamountList.List {
+	fmt.Println(page, err)
+	for _, item := range page.List {
 		fmt.Println(item)
 	}
-
 }
 
 func TestQuery2(t *testing.T) {
 	repo := NewOrderRepo()
 	//SELECT * FROM `tb_example` WHERE amount IN(20,21) AND `tb_example`.`deleted_at` IS NULL LIMIT 2
 	rows, err := repo.NewQuery().In("amount", []any{20, 21}).List(2)
-
-	//gorm.ErrRecordNotFound
-
 	fmt.Println(rows, err)
 
 	// SELECT * FROM `tb_example` WHERE amount Not IN('20','21')  AND `tb_example`.`deleted_at` IS NULL LIMIT 2
