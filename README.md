@@ -24,7 +24,7 @@ fmt.Println(pageList, err)
 ```
 多种写法
 ```go
-//相等条件
+//相等条件,你认为合理的写法就是对的
 repo.NewQuery().Where("age", 20).First()
 repo.NewQuery().Where("age", "=", 20).First()
 repo.NewQuery().Where("age=?", 20).First()
@@ -34,6 +34,18 @@ repo.NewQuery().Where("age", ">", 20).First()
 repo.NewQuery().Where("name", "IN", "张三,李四" ).First()
 ...
 ```
-[更多tests](https://github.com/micrease/gorme/blob/master/tests/gorme_test.go)
+动态条件查询
+```go
+//case条件成立时,执行闭包中的方法
+pageList, err := repo.NewQuery().Case(req.UserId > 0, func() {
+    query.Where("user_id", req.UserId)
+}).Case(len(req.GoodsName) > 0, func() {
+    query.Like("goods_name", req.GoodsName)
+}).Case(req.Amount > 0, func() {
+    query.Where("amount", ">", req.Amount)
+}).Paginate(1, 10)
+```
+联表查询,聚合查询
+[更多见tests](https://github.com/micrease/gorme/blob/master/tests/gorme_test.go)
 
 ***

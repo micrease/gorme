@@ -326,6 +326,13 @@ func (r *Repository[T]) OrWhere(query any, args ...interface{}) *Repository[T] {
 	return r
 }
 
+func (r *Repository[T]) Case(isTrue bool, handleFunc func()) *Repository[T] {
+	if isTrue {
+		handleFunc()
+	}
+	return r
+}
+
 func (r *Repository[T]) Where(query any, args ...interface{}) *Repository[T] {
 	switch query.(type) {
 	case string:

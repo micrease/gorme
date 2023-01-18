@@ -25,6 +25,52 @@ func TestQuery(t *testing.T) {
 	}
 }
 
+func TestWhereCase(t *testing.T) {
+	repo := NewOrderRepo()
+	//链式where
+
+	req := repo.NewModel()
+	req.UserId = 2
+	req.GoodsName = ""
+	req.Amount = 2
+
+	//SELECT * FROM `tb_order` WHERE user_id=2 AND amount>2 AND `tb_order`.`deleted_at` IS NULL LIMIT 2
+	query := repo.NewQuery()
+	if req.UserId > 0 {
+		query.Where("user_id", req.UserId)
+	}
+
+	if len(req.GoodsName) > 0 {
+		query.Like("goods_name", req.GoodsName)
+	}
+
+	if req.Amount > 0 {
+		query.Where("amount", ">", req.Amount)
+	}
+
+	//查询列表
+	list, err := query.List(2)
+	fmt.Println(err)
+	for _, row := range list {
+		fmt.Println(row.ID, row.UserId, row.Amount)
+	}
+
+	//SELECT * FROM `tb_order` WHERE user_id=2 AND amount>2 AND `tb_order`.`deleted_at` IS NULL LIMIT 2
+	pageList, err := repo.NewQuery().Case(req.UserId > 0, func() {
+		query.Where("user_id", req.UserId)
+	}).Case(len(req.GoodsName) > 0, func() {
+		query.Like("goods_name", req.GoodsName)
+	}).Case(req.Amount > 0, func() {
+		query.Where("amount", ">", req.Amount)
+	}).Paginate(1, 10)
+
+	//查询列表
+	fmt.Println(pageList, err)
+	for _, row := range list {
+		fmt.Println(row.ID, row.UserId, row.Amount)
+	}
+}
+
 // 查询
 func TestQueryPamount(t *testing.T) {
 	repo := NewOrderRepo()
