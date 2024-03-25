@@ -2,6 +2,7 @@ package tests
 
 import (
 	"fmt"
+	"github.com/micrease/gorme"
 	"testing"
 	"time"
 )
@@ -74,11 +75,31 @@ func TestWhereCase(t *testing.T) {
 // 查询
 func TestQueryPamount(t *testing.T) {
 	repo := NewOrderRepo()
-	page, err := repo.NewQuery().Where("id", ">", 20).Order("id desc").Paginate(1, 10)
+	page, err := repo.NewQuery().Where("id", ">", 20).Select("id,user_id,amount").Order("id desc").Paginate(2, 10)
 	fmt.Println(page)
 	for _, row := range page.List {
 		fmt.Println(row.ID, row.UserId, row.Amount, err)
 	}
+}
+
+func TestQueryPage2(t *testing.T) {
+	query := GetDB().Table("tb_order").Where("id>?", 1).Order("user_id desc")
+	result, err := gorme.Paginate[OrderModel](query, 1, 2)
+	fmt.Println(result, err)
+}
+
+func TestQueryPage3(t *testing.T) {
+	query := GetDB().Table("tb_order").Select("user_id,sum(amount) as max_amount").Where("id>?", 1).Group("user_id")
+	var rows OrderModel
+	var count int64
+	err := query.Count(&count).Order("max_amount desc").Limit(1).Offset(10).Find(&rows).Error
+	fmt.Println(count, rows, err)
+}
+
+func TestQueryPage4(t *testing.T) {
+	query := GetDB().Table("tb_order").Select("user_id,sum(amount) as max_amount").Where("id>?", 1).Group("user_id")
+	result, err := gorme.Paginate[OrderModel](query, 1, 2, "max_amount desc")
+	fmt.Println(result, err)
 }
 
 // 查询单值集合
@@ -221,7 +242,7 @@ func TestInsertOrUpdate(t *testing.T) {
 	fmt.Println(insertModel.ID, err)
 
 	updateModel := repo.NewModel()
-	updateModel.Amount = 12
+	updateModel.Amount = 1222
 	updateModel.ID = 400
 	updateModel.UserId = 100
 	updateModel.CreatedAt = time.Now()

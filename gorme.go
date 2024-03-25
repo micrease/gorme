@@ -5,8 +5,9 @@ import (
 )
 
 type PageQuery struct {
-	PageSize int `json:"page_size"` //每页条数
-	PageNo   int `json:"page_no"`   //当前页码
+	PageSize int    `json:"page_size"` //每页条数
+	PageNo   int    `json:"page_no"`   //当前页码
+	OrderBy  string `json:"order_by"`  //排序条件
 }
 
 type PageResult[T any] struct {
@@ -57,10 +58,16 @@ func PaginateByOptions[T any](opts ...Option) (*PageResult[T], error) {
 	return PaginateQuery[T](builder.query, builder.PageQuery)
 }
 
-func Paginate[T any](query *gorm.DB, pageNo int, pageSize int) (*PageResult[T], error) {
+func Paginate[T any](query *gorm.DB, pageNo int, pageSize int, orderBy ...string) (*PageResult[T], error) {
+	order := ""
+	if len(orderBy) > 0 {
+		order = orderBy[0]
+	}
+
 	return PaginateQuery[T](query, PageQuery{
 		PageNo:   pageNo,
 		PageSize: pageSize,
+		OrderBy:  order,
 	})
 }
 
@@ -79,7 +86,12 @@ func PaginateQuery[T any](query *gorm.DB, page PageQuery) (*PageResult[T], error
 
 	offset := (page.PageNo - 1) * page.PageSize
 	var rows []*T
-	err := query.Count(&result.TotalSize).Limit(page.PageSize).Offset(offset).Find(&rows).Error
+
+	query.Count(&result.TotalSize)
+	if len(page.OrderBy) > 0 {
+		query.Order(page.OrderBy)
+	}
+	err := query.Limit(page.PageSize).Offset(offset).Find(&rows).Error
 	if (int(result.TotalSize) % page.PageSize) > 0 {
 		result.TotalPage = result.TotalSize/int64(page.PageSize) + 1
 	} else {
